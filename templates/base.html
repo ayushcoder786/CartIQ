@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}CartIQ{% endblock %} · Retail Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <a class="brand" href="{{ url_for('dashboard') }}"><div class="brand-mark">C</div><div><b>CartIQ</b><small>RETAIL INTELLIGENCE</small></div></a>
+    <div class="nav-label">WORKSPACE</div>
+    <nav class="nav">
+      <a href="{{ url_for('dashboard') }}" class="{% if active=='dashboard' %}active{% endif %}"><span class="nav-icon">▦</span> Overview</a>
+      <a href="{{ url_for('customers') }}" class="{% if active=='customers' %}active{% endif %}"><span class="nav-icon">♙</span> Customer insights</a>
+      <a href="{{ url_for('reorder') }}" class="{% if active=='reorder' %}active{% endif %}"><span class="nav-icon">↻</span> Reorder lab</a>
+    </nav>
+    <div class="nav-label" style="margin-top:22px">DATA</div>
+    <nav class="nav"><a href="{{ url_for('download_dataset') }}"><span class="nav-icon">⇩</span> Download dataset</a></nav>
+    <div class="sidebar-foot"><span class="online"></span><b style="color:#e5edf8">Analytics engine online</b><br>Demo dataset · Synthetic retail orders<br><span style="font-size:10px">CartIQ / Student project</span></div>
+  </aside>
+  <main class="main">
+    <header class="topbar">
+      <div><div class="eyebrow">{% block eyebrow %}RETAIL ANALYTICS{% endblock %}</div><h1 class="page-title">{% block heading %}Overview{% endblock %}</h1><p class="subtitle">{% block subtitle %}A clearer picture of every basket, shopper and reorder.{% endblock %}</p></div>
+      <div class="top-actions"><span class="date-pill">◷ &nbsp; Dataset through Oct 2026</span><a class="button primary" href="{{ url_for('download_dataset') }}">↓ &nbsp; Export CSV</a></div>
+    </header>
+    {% block content %}{% endblock %}
+    <div class="footer-note">CartIQ demo · Reorder likelihood is an interpretable heuristic score, not a guarantee or a trained production model. Dataset is synthetic and intended for coursework.</div>
+  </main>
+</div>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body></html>

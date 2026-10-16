@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Overview{% endblock %}{% block heading %}Retail overview{% endblock %}
+{% block subtitle %}Your store performance, shopper frequency and reorder signals — all in one place.{% endblock %}
+{% block content %}
+<section class="grid stats-grid">
+  <article class="stat"><div class="stat-top">Gross sales <span class="stat-icon">₹</span></div><div class="stat-value">₹{{ "{:,.0f}".format(stats.revenue) }}</div><div class="stat-foot"><span class="positive">●</span> Across all recorded order lines</div></article>
+  <article class="stat"><div class="stat-top">Unique orders <span class="stat-icon">▤</span></div><div class="stat-value">{{ "{:,}".format(stats.orders) }}</div><div class="stat-foot">Completed demo transactions</div></article>
+  <article class="stat"><div class="stat-top">Customers <span class="stat-icon">♙</span></div><div class="stat-value">{{ "{:,}".format(stats.customers) }}</div><div class="stat-foot">Unique shopper profiles</div></article>
+  <article class="stat"><div class="stat-top">Average order value <span class="stat-icon">↗</span></div><div class="stat-value">₹{{ "{:,.2f}".format(stats.aov) }}</div><div class="stat-foot">Revenue ÷ number of orders</div></article>
+</section>
+<section class="grid content-grid">
+  <article class="panel"><div class="panel-head"><div><h2>Revenue pulse</h2><p class="hint">Monthly sales from order-line totals</p></div><span class="tiny-tag">LAST 8 MONTHS</span></div><div class="chart-container"><canvas id="revenueChart" class="chart"></canvas></div></article>
+  <article class="panel"><div class="panel-head"><div><h2>Shopper segments</h2><p class="hint">RFM-inspired customer groups</p></div><span class="tiny-tag">CUSTOMERS</span></div><div class="chart-container"><canvas id="segmentChart" class="chart"></canvas></div><div class="legend"><span><i class="dot" style="background:#a78bfa"></i>Segment share</span><span>Rules based on recency, frequency & spend</span></div></article>
+</section>
+<section class="grid content-grid">
+  <article class="panel"><div class="panel-head"><div><h2>Sales by category</h2><p class="hint">Which product groups contribute most?</p></div><span class="tiny-tag">REVENUE</span></div>
+    <div class="bar-list">{% set maxcat = stats.category_values|max if stats.category_values else 1 %}{% for label in stats.category_labels %}{% set val = stats.category_values[loop.index0] %}<div class="bar-row"><span class="bar-label">{{ label }}</span><div class="bar-track"><div class="bar-fill" style="width:{{ (val/maxcat*100)|round }}%"></div></div><span class="bar-value">₹{{ "{:,.0f}".format(val) }}</span></div>{% endfor %}</div>
+  </article>
+  <article class="panel"><div class="panel-head"><div><h2>Reorder signal</h2><p class="hint">Estimated customer-level likelihood</p></div><span class="tiny-tag">30-DAY PROXY</span></div>
+    <div style="display:flex;align-items:center;gap:18px;margin:18px 0"><div class="stat-icon" style="width:58px;height:58px;font-size:24px;background:#6ee7a81a;color:var(--green)">↻</div><div><div class="stat-value" style="margin:0">{{ "%.1f"|format(stats.reorder_rate) }}%</div><div class="stat-foot">Customers scoring 55% or higher</div></div></div>
+    <div class="result-meter"><span style="width:{{ stats.reorder_rate }}%;background:linear-gradient(90deg,#6ee7a8,#54d6d0)"></span></div>
+    <div class="result-detail"><span>Average order frequency</span><b>{{ "%.2f"|format(stats.avg_frequency) }} orders / customer</b></div>
+    <a class="button" style="display:inline-block;margin-top:15px" href="{{ url_for('reorder') }}">Explore reorder lab →</a>
+  </article>
+</section>
+<section class="panel"><div class="panel-head"><div><h2>Latest orders</h2><p class="hint">Most recent transactions in the dataset</p></div><a class="button" href="{{ url_for('download_dataset') }}">Export data ↓</a></div>
+<div class="table-wrap"><table><thead><tr><th>Order ID</th><th>Customer</th><th>Order date</th><th>Items</th><th>Order value</th><th>Status</th></tr></thead><tbody>
+{% for r in recent %}<tr><td><b>{{ r.id }}</b></td><td>{{ r.customer }}</td><td>{{ r.date }}</td><td>{{ r.items }}</td><td><b>₹{{ "{:,.2f}".format(r.value) }}</b></td><td><span class="badge champions">Processed</span></td></tr>{% endfor %}
+</tbody></table></div></section>
+{% endblock %}
+{% block scripts %}<script>
+const chartLabels={{ stats.monthly_labels|tojson }};
+const chartValues={{ stats.monthly_values|tojson }};
+const segLabels={{ stats.segment_labels|tojson }};
+const segValues={{ stats.segment_values|tojson }};
+if(window.Chart){
+ Chart.defaults.color='#93a4bd'; Chart.defaults.font.family='Inter, sans-serif';
+ const ctx=document.getElementById('revenueChart');
+ new Chart(ctx,{type:'line',data:{labels:chartLabels,datasets:[{label:'Revenue',data:chartValues,borderColor:'#ff9d3d',backgroundColor:'rgba(255,157,61,.12)',fill:true,tension:.38,pointRadius:3,pointBackgroundColor:'#ffb454',borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{maxRotation:0}},y:{grid:{color:'rgba(147,164,189,.12)'},ticks:{callback:v=>'₹'+Number(v).toLocaleString('en-IN',{notation:'compact'})}}}}});
+ new Chart(document.getElementById('segmentChart'),{type:'doughnut',data:{labels:segLabels,datasets:[{data:segValues,backgroundColor:['#a78bfa','#54d6d0','#ff9d3d','#ff7b8b','#6ee7a8'],borderColor:'#111827',borderWidth:4,hoverOffset:7}]},options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{position:'bottom',labels:{boxWidth:8,usePointStyle:true,padding:14,font:{size:10}}}}}});
+}
+</script>{% endblock %}

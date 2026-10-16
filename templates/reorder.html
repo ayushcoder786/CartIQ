@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Reorder lab{% endblock %}{% block eyebrow %}PREDICTION WORKBENCH{% endblock %}{% block heading %}Reorder lab{% endblock %}
+{% block subtitle %}Try customer behaviour values and calculate a reorder likelihood, expected basket and revenue opportunity instantly.{% endblock %}
+{% block content %}
+<div class="grid reorder-grid">
+ <section class="panel">
+  <div class="panel-head"><div><h2>Customer behaviour inputs</h2><p class="hint">Edit any value, then calculate the score.</p></div><span class="tiny-tag">LIVE CALCULATION</span></div>
+  <form id="predictForm">
+   <div class="form-grid">
+    <div class="form-field"><label for="frequency">Order frequency</label><input class="field" id="frequency" name="frequency" type="number" min="0" max="100" step="1" value="4" required><div class="helper">Number of completed orders</div></div>
+    <div class="form-field"><label for="recency">Recency (days)</label><input class="field" id="recency" name="recency" type="number" min="0" max="5000" step="1" value="24" required><div class="helper">Days since the latest order</div></div>
+    <div class="form-field"><label for="monetary">Lifetime spend (₹)</label><input class="field" id="monetary" name="monetary" type="number" min="0" step="0.01" value="240" required><div class="helper">Total historical customer spend</div></div>
+    <div class="form-field"><label for="basket">Expected basket value (₹)</label><input class="field" id="basket" name="basket" type="number" min="0" step="0.01" value="65" required><div class="helper">Estimated value of the next basket</div></div>
+   </div>
+   <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:23px"><button class="button primary" type="submit">Calculate reorder score ↗</button><button class="button" id="sampleBtn" type="button">Load sample customer</button><button class="button" id="clearBtn" type="button">Clear values</button></div>
+  </form>
+  <div class="callout"><b style="color:#f1f5fc">How the score works</b><br>45% recency score + 35% frequency score + 20% spend score, with each component capped at 100%. The output is a transparent demonstration heuristic, not a calibrated 30-day production prediction.</div>
+ </section>
+ <section class="panel">
+  <div class="panel-head"><div><h2>Prediction results</h2><p class="hint">Results update after calculation.</p></div><span class="tiny-tag" id="resultStatus">AWAITING INPUT</span></div>
+  <div class="result-card"><div class="eyebrow">REORDER LIKELIHOOD</div><div class="result-number" id="probability">—<span style="font-size:20px">%</span></div><div id="likelihoodLabel" style="color:var(--muted)">Enter values to calculate</div><div class="result-meter"><span id="probBar"></span></div>
+   <div class="result-detail"><span>Expected next basket</span><b id="expectedBasket">₹—</b></div>
+   <div class="result-detail"><span>Probability-weighted revenue</span><b id="expectedRevenue">₹—</b></div>
+   <div class="result-detail"><span>Suggested action</span><b id="suggestedAction" style="max-width:60%;text-align:right">—</b></div>
+  </div>
+  <div class="callout" id="resultExplanation">Run a calculation to see a customer-specific suggestion.</div>
+ </section>
+</div>
+<section class="grid stats-grid" style="margin-top:18px">
+ <article class="stat"><div class="stat-top">Dataset orders <span class="stat-icon">▤</span></div><div class="stat-value">{{ "{:,}".format(stats.orders) }}</div><div class="stat-foot">Distinct order identifiers</div></article>
+ <article class="stat"><div class="stat-top">Avg order value <span class="stat-icon">₹</span></div><div class="stat-value">₹{{ "{:,.2f}".format(stats.aov) }}</div><div class="stat-foot">Across all orders</div></article>
+ <article class="stat"><div class="stat-top">Average frequency <span class="stat-icon">↻</span></div><div class="stat-value">{{ "%.2f"|format(stats.avg_frequency) }}</div><div class="stat-foot">Orders per customer</div></article>
+ <article class="stat"><div class="stat-top">Dataset download <span class="stat-icon">⇩</span></div><div class="stat-value" style="font-size:18px">CSV ready</div><div class="stat-foot"><a href="{{ url_for('download_dataset') }}" style="color:var(--orange);text-decoration:underline">Download source data</a></div></article>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+const form=document.getElementById('predictForm');
+const fmt=n=>'₹'+Number(n).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+async function calculate(){
+ const payload={frequency:document.getElementById('frequency').value,recency:document.getElementById('recency').value,monetary:document.getElementById('monetary').value,basket:document.getElementById('basket').value};
+ if(Object.values(payload).some(v=>v===''||Number(v)<0)){alert('Please enter valid non-negative values in every field.');return}
+ const button=form.querySelector('button[type="submit"]');button.disabled=true;button.textContent='Calculating…';
+ try{
+  const res=await fetch('{{ url_for("predict") }}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const result=await res.json();if(!res.ok)throw new Error(result.error||'Unable to calculate.');
+  document.getElementById('probability').innerHTML=result.probability+'<span style="font-size:20px">%</span>';
+  document.getElementById('likelihoodLabel').textContent=result.label;
+  document.getElementById('probBar').style.width=result.probability+'%';
+  document.getElementById('expectedBasket').textContent=fmt(result.expected_basket);
+  document.getElementById('expectedRevenue').textContent=fmt(result.expected_revenue);
+  document.getElementById('suggestedAction').textContent=result.action;
+  document.getElementById('resultStatus').textContent='CALCULATED ✓';
+  document.getElementById('resultExplanation').textContent='A '+result.probability+'% score means probability-weighted revenue is '+fmt(result.expected_revenue)+' for the entered basket assumption. Use this as a learning/demo signal, not a guarantee.';
+ }catch(err){alert(err.message)}finally{button.disabled=false;button.textContent='Calculate reorder score ↗'}
+}
+form.addEventListener('submit',e=>{e.preventDefault();calculate()});
+document.getElementById('sampleBtn').addEventListener('click',()=>{document.getElementById('frequency').value=7;document.getElementById('recency').value=12;document.getElementById('monetary').value=640;document.getElementById('basket').value=89;calculate()});
+document.getElementById('clearBtn').addEventListener('click',()=>{form.reset();document.getElementById('probability').innerHTML='—<span style="font-size:20px">%</span>';document.getElementById('likelihoodLabel').textContent='Enter values to calculate';document.getElementById('probBar').style.width='0';document.getElementById('expectedBasket').textContent='₹—';document.getElementById('expectedRevenue').textContent='₹—';document.getElementById('suggestedAction').textContent='—';document.getElementById('resultStatus').textContent='AWAITING INPUT';document.getElementById('resultExplanation').textContent='Run a calculation to see a customer-specific suggestion.'});
+calculate();
+</script>
+{% endblock %}
