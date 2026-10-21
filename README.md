@@ -37,7 +37,7 @@ A dark-themed, three-page e-commerce analytics website designed to open and run 
    ```bash
    python app.py
    ```
-6. Open `http://127.0.0.1:5000` in your browser.
+6. Open `http://127.0.0.1:5000` in your browser.........
 
 ## Calculations
 - **Frequency** = number of distinct orders for a customer.
